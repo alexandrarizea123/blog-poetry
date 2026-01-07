@@ -18,7 +18,7 @@ export function ScriePoezie() {
   const { user } = useAuth();
 
   const galleryOptions = [
-    { value: "", label: "Fara galerie" },
+    { value: "", label: "Toate poeziile" },
     ...galleries.map((gallery) => ({
       value: String(gallery.id),
       label: gallery.name
@@ -103,10 +103,13 @@ export function ScriePoezie() {
     const formData = new FormData(event.currentTarget);
     const title = String(formData.get("title") ?? "").trim();
     const content = String(formData.get("content") ?? "").trim();
-    const parsedGalleryId = Number(selectedGalleryId);
-    const galleryId = Number.isFinite(parsedGalleryId)
-      ? parsedGalleryId
-      : null;
+    const parsedGalleryId = selectedGalleryId
+      ? Number(selectedGalleryId)
+      : Number.NaN;
+    const galleryId =
+      Number.isFinite(parsedGalleryId) && parsedGalleryId > 0
+        ? parsedGalleryId
+        : null;
 
     if (!user) {
       setError("Trebuie sa fii autentificat.");
@@ -121,8 +124,15 @@ export function ScriePoezie() {
     setError(null);
     try {
       setIsSubmitting(true);
-      await createPoem({ title, content, authorId: user.id, galleryId });
-      const targetGallery = galleryId ? `/galerie/${galleryId}` : "/galerie/fara";
+      const created = await createPoem({
+        title,
+        content,
+        authorId: user.id,
+        galleryId
+      });
+      const targetGallery = created.galleryId
+        ? `/galerie/${created.galleryId}`
+        : "/galerie/toate";
       navigate(targetGallery);
     } catch (submitError) {
       setError(

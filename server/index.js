@@ -366,7 +366,9 @@ app.post("/api/poems", async (req, res) => {
       ? authorId
       : null;
   const parsedGalleryId =
-    typeof galleryId === "number" && Number.isInteger(galleryId)
+    typeof galleryId === "number" &&
+    Number.isInteger(galleryId) &&
+    galleryId > 0
       ? galleryId
       : null;
 
@@ -405,7 +407,9 @@ app.put("/api/poems/:id", async (req, res) => {
       ? authorId
       : null;
   const parsedGalleryId =
-    typeof galleryId === "number" && Number.isInteger(galleryId)
+    typeof galleryId === "number" &&
+    Number.isInteger(galleryId) &&
+    galleryId > 0
       ? galleryId
       : null;
 

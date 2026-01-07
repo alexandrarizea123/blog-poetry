@@ -389,6 +389,10 @@ export function GaleriePoems() {
                     <p className="text-sm text-black">{editError}</p>
                   ) : null}
                 </div>
+              ) : poem.content ? (
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-black/80">
+                  {poem.content}
+                </p>
               ) : (
                 <p className="mt-3 text-sm leading-relaxed text-black/80">
                   {poem.excerpt}
