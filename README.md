@@ -5,6 +5,7 @@
 - roluri: poet / cititor
 - creare, editare si stergere poezii
 - galerie cu poezii existente
+- UI alb-negru cu doodles subtile pe fundal
 
 ## Mockups
 ![Homepage Jurnal Poezie](images/homepage-jurnal-poezie.png)
@@ -29,7 +30,7 @@ Pentru frontend in dev, seteaza:
 ## Rulare cu Docker (app + db)
 `docker compose up --build`
 
-Aplicatia este disponibila la `http://localhost:3001`.
+Aplicatia este disponibila la `http://localhost:3001` (frontend servit din backend).
 Postgres ruleaza pe `localhost:5435`.
 
 ## Variabile de mediu
@@ -45,11 +46,11 @@ Frontend:
 - `VITE_API_URL` (gol pentru same-origin, sau `http://localhost:3001` in dev)
 
 ## Endpoints API
-- `GET /api/health`
-- `POST /api/register`
-- `POST /api/login`
-- `POST /api/logout`
-- `GET /api/poems`
-- `POST /api/poems`
-- `PUT /api/poems/:id`
-- `DELETE /api/poems/:id`
+- `GET /api/health` - sanity check DB
+- `POST /api/register` - body: `{ name, email, password, role }`
+- `POST /api/login` - body: `{ email, password, role? }`
+- `POST /api/logout` - logout local
+- `GET /api/poems` - lista poezii
+- `POST /api/poems` - body: `{ title, content, authorId? }`
+- `PUT /api/poems/:id` - body: `{ title, content, authorId }`
+- `DELETE /api/poems/:id` - optional query `authorId`
