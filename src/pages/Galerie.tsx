@@ -1,6 +1,15 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import {
+  buildExcerpt,
+  buildMeta,
+  deletePoem,
+  fetchPoems,
+  type Poem
+} from "../lib/poems";
 
-const poems = [
+const curatedPoems = [
   {
     title: "Ploaie pe strada goala",
     meta: "dimineata, 3 min",
@@ -39,7 +48,90 @@ const poems = [
   }
 ];
 
+type DisplayPoem = {
+  key: string;
+  title: string;
+  meta: string;
+  excerpt: string;
+  canDelete: boolean;
+  id?: number;
+};
+
 export function Galerie() {
+  const { user } = useAuth();
+  const [storedPoems, setStoredPoems] = useState<Poem[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadPoems() {
+      try {
+        setIsLoading(true);
+        const poems = await fetchPoems();
+        if (isActive) {
+          setStoredPoems(poems);
+          setError(null);
+        }
+      } catch (loadError) {
+        if (isActive) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Eroare la incarcare."
+          );
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    loadPoems();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  async function handleDelete(poemId: number) {
+    if (!user) {
+      setError("Trebuie sa fii autentificat.");
+      return;
+    }
+
+    try {
+      await deletePoem(poemId, user.id);
+      setStoredPoems((items) => items.filter((poem) => poem.id !== poemId));
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Eroare la stergere."
+      );
+    }
+  }
+
+  const poems: DisplayPoem[] = [
+    ...storedPoems.map((poem) => ({
+      key: `user-${poem.id}`,
+      id: poem.id,
+      title: poem.title,
+      meta: buildMeta(poem.createdAt, poem.content),
+      excerpt: buildExcerpt(poem.content),
+      canDelete: poem.authorId === user?.id
+    })),
+    ...curatedPoems.map((poem, index) => ({
+      key: `curated-${index}`,
+      title: poem.title,
+      meta: poem.meta,
+      excerpt: poem.excerpt,
+      canDelete: false
+    }))
+  ];
+
   return (
     <main className="min-h-screen text-zinc-900">
       <div className="mx-auto max-w-4xl px-6 pb-20 pt-16">
@@ -61,15 +153,34 @@ export function Galerie() {
         </header>
 
         <section className="mt-10 grid gap-6 sm:grid-cols-2">
+          {error ? (
+            <p className="text-sm text-rose-600 sm:col-span-2">{error}</p>
+          ) : null}
+          {isLoading ? (
+            <p className="text-sm text-zinc-600 sm:col-span-2">
+              Se incarca poeziile...
+            </p>
+          ) : null}
           {poems.map((poem) => (
             <article
-              key={poem.title}
+              key={poem.key}
               className="rounded-2xl border border-zinc-300/60 bg-white/70 p-6 shadow-[0_14px_35px_-28px_rgba(0,0,0,0.45)] backdrop-blur"
             >
               <p className="text-xs uppercase tracking-[0.3em] text-zinc-500">
                 {poem.meta}
               </p>
-              <h2 className="mt-3 text-xl font-semibold">{poem.title}</h2>
+              <div className="mt-3 flex items-start justify-between gap-4">
+                <h2 className="text-xl font-semibold">{poem.title}</h2>
+                {poem.canDelete && poem.id !== undefined ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(poem.id)}
+                    className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 transition hover:text-rose-600"
+                  >
+                    Sterge
+                  </button>
+                ) : null}
+              </div>
               <p className="mt-3 text-sm leading-relaxed text-zinc-700">
                 {poem.excerpt}
               </p>

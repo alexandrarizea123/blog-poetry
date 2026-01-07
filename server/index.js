@@ -43,6 +43,29 @@ function sanitizeUser(row) {
   };
 }
 
+function sanitizePoem(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    content: row.content,
+    createdAt:
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : row.created_at,
+    authorId: row.author_id ?? null
+  };
+}
+
+async function ensureSchema() {
+  await pool.query(`create table if not exists poems (
+    id serial primary key,
+    author_id integer references users(id) on delete set null,
+    title text not null,
+    content text not null,
+    created_at timestamptz not null default now()
+  )`);
+}
+
 app.get("/api/health", async (_req, res) => {
   try {
     await pool.query("select 1");
@@ -132,6 +155,89 @@ app.post("/api/logout", (_req, res) => {
   return res.json({ ok: true });
 });
 
-app.listen(PORT, () => {
-  console.log(`Auth server running on http://localhost:${PORT}`);
+app.get("/api/poems", async (_req, res) => {
+  try {
+    const result = await pool.query(
+      "select id, title, content, created_at, author_id from poems order by created_at desc"
+    );
+
+    return res.json({ poems: result.rows.map(sanitizePoem) });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la incarcare." });
+  }
 });
+
+app.post("/api/poems", async (req, res) => {
+  const { title, content, authorId } = req.body ?? {};
+
+  if (!title || !content) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  const normalizedTitle = String(title).trim();
+  const normalizedContent = String(content).trim();
+  const parsedAuthorId =
+    typeof authorId === "number" && Number.isInteger(authorId)
+      ? authorId
+      : null;
+
+  if (!normalizedTitle || !normalizedContent) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  try {
+    const result = await pool.query(
+      "insert into poems (title, content, author_id) values ($1, $2, $3) returning id, title, content, created_at, author_id",
+      [normalizedTitle, normalizedContent, parsedAuthorId]
+    );
+
+    return res.status(201).json({ poem: sanitizePoem(result.rows[0]) });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la salvare." });
+  }
+});
+
+app.delete("/api/poems/:id", async (req, res) => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Id invalid." });
+  }
+
+  const authorIdParam =
+    typeof req.query.authorId === "string"
+      ? Number(req.query.authorId)
+      : null;
+  const hasAuthorId = Number.isInteger(authorIdParam);
+
+  try {
+    const result = await pool.query(
+      hasAuthorId
+        ? "delete from poems where id = $1 and author_id = $2 returning id"
+        : "delete from poems where id = $1 returning id",
+      hasAuthorId ? [id, authorIdParam] : [id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Poezia nu a fost gasita." });
+    }
+
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la stergere." });
+  }
+});
+
+async function startServer() {
+  try {
+    await ensureSchema();
+    app.listen(PORT, () => {
+      console.log(`Auth server running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server.");
+    process.exit(1);
+  }
+}
+
+startServer();
