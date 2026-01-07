@@ -20,33 +20,42 @@ function normalizeText(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function parsePoem(payload: any): Poem | null {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parsePoem(payload: unknown): Poem | null {
+  if (!isRecord(payload)) {
+    return null;
+  }
+
+  const { id, title, content, createdAt, authorId } = payload;
+
   if (
-    !payload ||
-    (typeof payload.id !== "number" && typeof payload.id !== "string") ||
-    typeof payload.title !== "string" ||
-    typeof payload.content !== "string" ||
-    typeof payload.createdAt !== "string"
+    (typeof id !== "number" && typeof id !== "string") ||
+    typeof title !== "string" ||
+    typeof content !== "string" ||
+    typeof createdAt !== "string"
   ) {
     return null;
   }
 
-  const id = Number(payload.id);
-  if (!Number.isFinite(id)) {
+  const normalizedId = Number(id);
+  if (!Number.isFinite(normalizedId)) {
     return null;
   }
 
-  const authorId =
-    typeof payload.authorId === "number" && Number.isFinite(payload.authorId)
-      ? payload.authorId
+  const normalizedAuthorId =
+    typeof authorId === "number" && Number.isFinite(authorId)
+      ? authorId
       : null;
 
   return {
-    id,
-    title: payload.title,
-    content: payload.content,
-    createdAt: payload.createdAt,
-    authorId
+    id: normalizedId,
+    title,
+    content,
+    createdAt,
+    authorId: normalizedAuthorId
   };
 }
 

@@ -23,7 +23,7 @@ export function Auth() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold">Register</h2>
+            <h2 className="text-xl font-semibold">Inregistrare</h2>
             <div className="mt-6">
               <RegisterForm showLoginLink={false} />
             </div>

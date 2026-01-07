@@ -14,7 +14,9 @@ const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
 const SERVE_STATIC = process.env.SERVE_STATIC === "true";
 const DB_CONNECT_RETRIES = Number(process.env.DB_CONNECT_RETRIES ?? 10);
 const DB_CONNECT_DELAY_MS = Number(process.env.DB_CONNECT_DELAY_MS ?? 1000);
-const allowedOrigins = CORS_ORIGIN.split(",").map((origin) => origin.trim());
+const allowedOrigins = CORS_ORIGIN.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -26,7 +28,10 @@ if (!DATABASE_URL) {
 const pool = new Pool({ connectionString: DATABASE_URL });
 const app = express();
 
-app.use(cors({ origin: allowedOrigins }));
+const corsOptions = allowedOrigins.length
+  ? { origin: allowedOrigins }
+  : { origin: false };
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const allowedRoles = new Set(["poet", "cititor"]);
@@ -253,7 +258,7 @@ app.put("/api/poems/:id", async (req, res) => {
       ? authorId
       : null;
 
-  if (!normalizedTitle || !normalizedContent || !parsedAuthorId) {
+  if (!normalizedTitle || !normalizedContent || parsedAuthorId === null) {
     return res.status(400).json({ error: "Date incomplete." });
   }
 
@@ -320,9 +325,24 @@ if (SERVE_STATIC) {
 async function startServer() {
   try {
     await connectWithRetry();
-    app.listen(PORT, () => {
-      console.log(`Auth server running on http://localhost:${PORT}`);
+    const server = app.listen(PORT, () => {
+      console.log(`BlogPoetry server running on http://localhost:${PORT}`);
     });
+
+    const shutdown = async () => {
+      server.close(() => {
+        console.log("HTTP server closed.");
+      });
+      try {
+        await pool.end();
+      } catch (closeError) {
+        console.error("Failed to close database connection.");
+        console.error(closeError);
+      }
+    };
+
+    process.on("SIGTERM", shutdown);
+    process.on("SIGINT", shutdown);
   } catch (error) {
     console.error("Failed to start server.");
     if (error instanceof Error) {
