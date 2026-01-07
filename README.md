@@ -7,6 +7,7 @@
 - galerie cu poezii existente
 - galerii multiple pentru categorii de poezii
 - profil poet cu statistici (citiri, aprecieri, salvari) si badge-uri
+- profil cititor cu biblioteca de aprecieri si salvari
 - interactiuni cititor: citit, apreciat, salvat
 - contorizare cititori unici per poet
 - UI alb-negru cu doodles subtile pe fundal
@@ -69,3 +70,5 @@ Frontend:
 - `DELETE /api/poems/:id/save` - parametru: `userId`
 - `GET /api/poets/:id/stats` - statistici agregate pentru poet
 - `GET /api/users/:id/poem-interactions` - query: `poemIds=1,2,3`
+- `GET /api/users/:id/liked-poems` - lista poezii apreciate
+- `GET /api/users/:id/saved-poems` - lista poezii salvate

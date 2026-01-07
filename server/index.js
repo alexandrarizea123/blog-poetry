@@ -5,6 +5,7 @@ import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import pg from "pg";
+import { curatedPoems } from "./curatedPoems.js";
 
 const { Pool } = pg;
 
@@ -136,6 +137,28 @@ async function ensureSchema() {
   );
 }
 
+async function seedCuratedPoems() {
+  if (!curatedPoems.length) {
+    return;
+  }
+
+  const result = await pool.query(
+    "select count(*)::int as count from poems where author_id is null"
+  );
+  const existingCount = Number(result.rows[0]?.count ?? 0);
+
+  if (existingCount > 0) {
+    return;
+  }
+
+  for (const poem of curatedPoems) {
+    await pool.query("insert into poems (title, content) values ($1, $2)", [
+      poem.title,
+      poem.content
+    ]);
+  }
+}
+
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -144,6 +167,7 @@ async function connectWithRetry() {
   for (let attempt = 1; attempt <= DB_CONNECT_RETRIES; attempt += 1) {
     try {
       await ensureSchema();
+      await seedCuratedPoems();
       return;
     } catch (error) {
       const isLastAttempt = attempt === DB_CONNECT_RETRIES;
@@ -667,6 +691,52 @@ app.get("/api/poets/:id/stats", async (req, res) => {
             : lastPublished ?? null
       }
     });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la incarcare." });
+  }
+});
+
+app.get("/api/users/:id/liked-poems", async (req, res) => {
+  const userId = Number(req.params.id);
+
+  if (!Number.isInteger(userId)) {
+    return res.status(400).json({ error: "Id invalid." });
+  }
+
+  try {
+    const result = await pool.query(
+      `select p.id, p.title, p.content, p.created_at, p.author_id, p.gallery_id
+       from poem_likes pl
+       join poems p on p.id = pl.poem_id
+       where pl.user_id = $1
+       order by pl.created_at desc`,
+      [userId]
+    );
+
+    return res.json({ poems: result.rows.map(sanitizePoem) });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la incarcare." });
+  }
+});
+
+app.get("/api/users/:id/saved-poems", async (req, res) => {
+  const userId = Number(req.params.id);
+
+  if (!Number.isInteger(userId)) {
+    return res.status(400).json({ error: "Id invalid." });
+  }
+
+  try {
+    const result = await pool.query(
+      `select p.id, p.title, p.content, p.created_at, p.author_id, p.gallery_id
+       from poem_saves ps
+       join poems p on p.id = ps.poem_id
+       where ps.user_id = $1
+       order by ps.created_at desc`,
+      [userId]
+    );
+
+    return res.json({ poems: result.rows.map(sanitizePoem) });
   } catch (error) {
     return res.status(500).json({ error: "Eroare la incarcare." });
   }

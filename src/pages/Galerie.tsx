@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { curatedPoems } from "../lib/curatedPoems";
 import {
   deleteGallery,
   fetchGalleries,
@@ -218,7 +217,7 @@ export function Galerie() {
               </p>
               <h3 className="mt-2 text-lg font-semibold">Toate poeziile</h3>
               <p className="mt-3 text-xs uppercase tracking-[0.3em] text-black/50">
-                {storedPoems.length + curatedPoems.length} poezii
+                {storedPoems.length} poezii
               </p>
             </Link>
 

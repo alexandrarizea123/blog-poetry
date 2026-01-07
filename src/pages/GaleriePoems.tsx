@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { curatedPoems } from "../lib/curatedPoems";
 import { fetchGalleries, type Gallery } from "../lib/galleries";
 import {
   buildExcerpt,
@@ -323,34 +322,20 @@ export function GaleriePoems() {
     return [];
   }, [selectedFilter, storedPoems]);
 
-  const displayPoems: DisplayPoem[] = [
-    ...filteredStoredPoems.map((poem) => ({
-      key: `user-${poem.id}`,
-      id: poem.id,
-      title: poem.title,
-      content: poem.content,
-      meta: buildMeta(poem.createdAt, poem.content),
-      excerpt: buildExcerpt(poem.content),
-      galleryId: poem.galleryId,
-      galleryName: poem.galleryId
-        ? galleryNameById.get(poem.galleryId) ?? null
-        : null,
-      canDelete: poem.authorId === user?.id,
-      authorId: poem.authorId ?? null
-    })),
-    ...(selectedFilter === "all"
-      ? curatedPoems.map((poem, index) => ({
-          key: `curated-${index}`,
-          id: null,
-          title: poem.title,
-          meta: poem.meta,
-          excerpt: poem.excerpt,
-          canDelete: false,
-          galleryId: null,
-          galleryName: null
-        }))
-      : [])
-  ];
+  const displayPoems: DisplayPoem[] = filteredStoredPoems.map((poem) => ({
+    key: `user-${poem.id}`,
+    id: poem.id,
+    title: poem.title,
+    content: poem.content,
+    meta: buildMeta(poem.createdAt, poem.content),
+    excerpt: buildExcerpt(poem.content),
+    galleryId: poem.galleryId,
+    galleryName: poem.galleryId
+      ? galleryNameById.get(poem.galleryId) ?? null
+      : null,
+    canDelete: poem.authorId === user?.id,
+    authorId: poem.authorId ?? null
+  }));
 
   const selectedGalleryLabel =
     selectedFilter === "all"

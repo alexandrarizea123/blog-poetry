@@ -83,6 +83,40 @@ export async function fetchPoems(): Promise<Poem[]> {
     .filter((poem: Poem | null): poem is Poem => Boolean(poem));
 }
 
+export async function fetchLikedPoems(userId: number): Promise<Poem[]> {
+  const response = await fetch(`${API_URL}/api/users/${userId}/liked-poems`);
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(payload?.error ?? "Eroare la incarcare.");
+  }
+
+  if (!Array.isArray(payload?.poems)) {
+    return [];
+  }
+
+  return payload.poems
+    .map(parsePoem)
+    .filter((poem: Poem | null): poem is Poem => Boolean(poem));
+}
+
+export async function fetchSavedPoems(userId: number): Promise<Poem[]> {
+  const response = await fetch(`${API_URL}/api/users/${userId}/saved-poems`);
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(payload?.error ?? "Eroare la incarcare.");
+  }
+
+  if (!Array.isArray(payload?.poems)) {
+    return [];
+  }
+
+  return payload.poems
+    .map(parsePoem)
+    .filter((poem: Poem | null): poem is Poem => Boolean(poem));
+}
+
 export async function createPoem({
   title,
   content,
