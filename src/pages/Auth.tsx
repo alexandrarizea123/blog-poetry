@@ -3,12 +3,9 @@ import { RegisterForm } from "../components/RegisterForm";
 
 export function Auth() {
   return (
-    <main className="min-h-screen text-zinc-900">
+    <main className="min-h-screen text-black">
       <div className="mx-auto max-w-5xl px-6 pb-20 pt-16">
-        <header className="border-b border-zinc-300/70 pb-10">
-          <p className="text-xs uppercase tracking-[0.32em] text-zinc-500">
-            cont
-          </p>
+        <header className="border-b border-black/20 pb-10">
           <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
             Logare sau inregistrare
           </h1>

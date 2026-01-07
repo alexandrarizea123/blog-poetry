@@ -58,7 +58,7 @@ export function RoleSelect({ label = "Rol", value, onChange }: RoleSelectProps) 
         >
           <span>{roleLabels[value]}</span>
           <span
-            className={`transition ${open ? "rotate-180 text-zinc-900" : "text-zinc-500"}`}
+            className={`transition ${open ? "rotate-180 text-black" : "text-black/60"}`}
             aria-hidden="true"
           >
             v
@@ -69,7 +69,7 @@ export function RoleSelect({ label = "Rol", value, onChange }: RoleSelectProps) 
           <div
             ref={menuRef}
             role="listbox"
-            className="absolute z-10 mt-2 w-full rounded-xl border border-zinc-300/70 bg-[#f6f4ef] p-2 shadow-[0_18px_45px_-30px_rgba(0,0,0,0.45)]"
+            className="absolute z-10 mt-2 w-full rounded-xl border border-black/20 bg-white p-2 shadow-[0_18px_45px_-30px_rgba(0,0,0,0.45)]"
           >
             {Object.entries(roleLabels).map(([roleKey, labelText]) => {
               const role = roleKey as Role;
@@ -86,8 +86,8 @@ export function RoleSelect({ label = "Rol", value, onChange }: RoleSelectProps) 
                   }}
                   className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm transition ${
                     role === value
-                      ? "bg-zinc-900 text-white"
-                      : "text-zinc-800 hover:bg-zinc-200/80"
+                      ? "bg-black text-white"
+                      : "text-black hover:bg-black/10"
                   }`}
                 >
                   {labelText}

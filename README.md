@@ -6,6 +6,10 @@
 - creare, editare si stergere poezii
 - galerie cu poezii existente
 
+## Mockups
+![Homepage Jurnal Poezie](images/homepage-jurnal-poezie.png)
+![Scrie O Poezie](images/scrie-o-poezie.png)
+
 ## Cerinte
 - Node.js 20+
 - Docker (optional pentru rulare containerizata)
