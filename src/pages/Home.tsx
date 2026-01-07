@@ -1,4 +1,6 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import { API_URL } from "../lib/api";
 
 const poems = [
   {
@@ -22,20 +24,50 @@ const poems = [
 ];
 
 export function Home() {
+  const { role, user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    try {
+      await fetch(`${API_URL}/api/logout`, { method: "POST" });
+    } finally {
+      logout();
+      navigate("/");
+    }
+  }
+
   return (
     <main className="min-h-screen text-zinc-900">
       <div className="mx-auto max-w-5xl px-6 pb-20 pt-16">
         <header className="border-b border-zinc-300/70 pb-10">
+          <div className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-zinc-500">
+            <span>{user ? `rol ${user.role}` : "rol necunoscut"}</span>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="rounded-full border border-zinc-300 px-4 py-2 text-[10px] uppercase tracking-[0.25em] text-zinc-600 transition hover:border-zinc-800 hover:text-zinc-900"
+            >
+              Logout
+            </button>
+          </div>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
             Jurnal de poezie
           </h1>
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
               to="/galerie"
               className="inline-flex items-center justify-center rounded-full border border-zinc-800 px-6 py-2 text-xs uppercase tracking-[0.25em] text-zinc-800 transition hover:bg-zinc-900 hover:text-white"
             >
               Galerie
             </Link>
+            {role === "poet" ? (
+              <Link
+                to="/scrie"
+                className="inline-flex items-center justify-center rounded-full border border-zinc-800 bg-zinc-900 px-6 py-2 text-xs uppercase tracking-[0.25em] text-white transition hover:bg-transparent hover:text-zinc-900"
+              >
+                Scrie o poezie
+              </Link>
+            ) : null}
           </div>
         </header>
 
