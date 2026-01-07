@@ -23,7 +23,7 @@ export function LoginForm({ showRegisterLink = false }: LoginFormProps) {
     setError(null);
 
     if (!email || !password) {
-      setError("Completeaza emailul si parola.");
+      setError("Completeaza e-mailul si parola.");
       return;
     }
 
@@ -62,7 +62,7 @@ export function LoginForm({ showRegisterLink = false }: LoginFormProps) {
       className="rounded-2xl border border-black/20 bg-white p-8 shadow-[0_18px_45px_-30px_rgba(0,0,0,0.45)]"
     >
       <label className="form-label">
-        Email
+        E-mail
         <input
           type="email"
           name="email"
@@ -94,7 +94,7 @@ export function LoginForm({ showRegisterLink = false }: LoginFormProps) {
         className="mt-8 inline-flex items-center justify-center rounded-full border border-black px-6 py-2 text-xs uppercase tracking-[0.25em] text-black transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
         disabled={isSubmitting}
       >
-        {isSubmitting ? "Se verifica..." : "Intra"}
+        {isSubmitting ? "Se verifica..." : "Autentifica-te"}
       </button>
 
       {error ? (
@@ -107,7 +107,7 @@ export function LoginForm({ showRegisterLink = false }: LoginFormProps) {
         <p className="mt-6 text-sm text-black/70">
           Nu ai cont?{" "}
           <Link to="/" className="text-black underline">
-            Creeaza unul
+            Inregistreaza-te
           </Link>
           .
         </p>

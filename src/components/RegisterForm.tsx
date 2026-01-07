@@ -92,7 +92,7 @@ export function RegisterForm({ showLoginLink = false }: RegisterFormProps) {
       </label>
 
       <label className="mt-6 block form-label">
-        Email
+        E-mail
         <input
           type="email"
           name="email"
@@ -169,7 +169,7 @@ export function RegisterForm({ showLoginLink = false }: RegisterFormProps) {
         <p className="mt-6 text-sm text-black/70">
           Ai deja cont?{" "}
           <Link to="/" className="text-black underline">
-            Intra
+            Autentifica-te
           </Link>
           .
         </p>

@@ -1,4 +1,4 @@
-# Blog Poetry
+# Jurnal de poezie
 
 ## Functionalitati
 - autentificare si inregistrare
@@ -10,7 +10,7 @@
 
 ## Mockups
 ![Homepage Jurnal Poezie](images/homepage-jurnal-poezie.png)
-![Scrie O Poezie](images/scrie-o-poezie.png)
+![Scrie o poezie](images/scrie-o-poezie.png)
 
 ## Cerinte
 - Node.js 20+
@@ -47,15 +47,15 @@ Frontend:
 - `VITE_API_URL` (gol pentru same-origin, sau `http://localhost:3001` in dev)
 
 ## Endpoints API
-- `GET /api/health` - sanity check DB
+- `GET /api/health` - verificare baza de date
 - `GET /api/galleries` - lista galerii (optional `authorId`)
-- `POST /api/galleries` - body: `{ name, authorId }`
-- `PUT /api/galleries/:id` - body: `{ name, authorId }`
-- `DELETE /api/galleries/:id` - query: `authorId`
-- `POST /api/register` - body: `{ name, email, password, role }`
-- `POST /api/login` - body: `{ email, password, role? }`
-- `POST /api/logout` - logout local
+- `POST /api/galleries` - corp: `{ name, authorId }`
+- `PUT /api/galleries/:id` - corp: `{ name, authorId }`
+- `DELETE /api/galleries/:id` - parametru: `authorId`
+- `POST /api/register` - corp: `{ name, email, password, role }`
+- `POST /api/login` - corp: `{ email, password, role? }`
+- `POST /api/logout` - delogare locala
 - `GET /api/poems` - lista poezii
-- `POST /api/poems` - body: `{ title, content, authorId?, galleryId? }`
-- `PUT /api/poems/:id` - body: `{ title, content, authorId, galleryId? }`
-- `DELETE /api/poems/:id` - optional query `authorId`
+- `POST /api/poems` - corp: `{ title, content, authorId?, galleryId? }`
+- `PUT /api/poems/:id` - corp: `{ title, content, authorId, galleryId? }`
+- `DELETE /api/poems/:id` - parametru optional: `authorId`

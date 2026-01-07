@@ -7,13 +7,13 @@ export function Auth() {
       <div className="mx-auto max-w-5xl px-6 pb-20 pt-16">
         <header className="border-b border-black/20 pb-10">
           <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
-            Logare sau inregistrare
+            Autentificare sau inregistrare
           </h1>
         </header>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-2">
           <section>
-            <h2 className="text-xl font-semibold">Logare</h2>
+            <h2 className="text-xl font-semibold">Autentificare</h2>
             <div className="mt-6">
               <LoginForm showRegisterLink={false} />
             </div>

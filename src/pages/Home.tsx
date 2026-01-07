@@ -53,7 +53,7 @@ export function Home() {
               onClick={handleLogout}
               className="rounded-full border border-black/20 px-4 py-2 text-[10px] uppercase tracking-[0.25em] text-black/70 transition hover:border-black hover:text-black"
             >
-              Logout
+              Deconectare
             </button>
           </div>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
@@ -100,10 +100,10 @@ export function Home() {
         <section aria-labelledby="preview-title" className="mt-16">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <h2 id="preview-title" className="text-2xl font-semibold">
-              Preview galerie
+              Previzualizare galerie
             </h2>
             <p className="text-xs uppercase tracking-[0.3em] text-black/60">
-              3 fragmente
+              4 fragmente
             </p>
           </div>
 

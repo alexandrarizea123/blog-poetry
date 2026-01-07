@@ -166,7 +166,7 @@ app.post("/api/register", async (req, res) => {
     );
 
     if (existing.rowCount > 0) {
-      return res.status(409).json({ error: "Email deja folosit." });
+      return res.status(409).json({ error: "E-mail deja folosit." });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -481,7 +481,7 @@ async function startServer() {
   try {
     await connectWithRetry();
     const server = app.listen(PORT, () => {
-      console.log(`BlogPoetry server running on http://localhost:${PORT}`);
+      console.log(`Server Jurnal de poezie pornit pe http://localhost:${PORT}`);
     });
 
     const shutdown = async () => {

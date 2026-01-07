@@ -178,7 +178,7 @@ export function Galerie() {
               to="/home"
               className="inline-flex items-center justify-center rounded-full border border-black px-6 py-2 text-xs uppercase tracking-[0.25em] text-black transition hover:bg-black hover:text-white"
             >
-              Inapoi la home
+              Inapoi acasa
             </Link>
           </div>
         </header>
