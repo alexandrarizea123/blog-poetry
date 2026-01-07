@@ -6,6 +6,7 @@ import { Galerie } from "./pages/Galerie";
 import { GaleriePoems } from "./pages/GaleriePoems";
 import { Auth } from "./pages/Auth";
 import { Home } from "./pages/Home";
+import { ProfilPoet } from "./pages/ProfilPoet";
 import { ScriePoezie } from "./pages/ScriePoezie";
 
 export function App() {
@@ -28,6 +29,14 @@ export function App() {
           element={
             <RequirePoet>
               <ScriePoezie />
+            </RequirePoet>
+          }
+        />
+        <Route
+          path="/profil"
+          element={
+            <RequirePoet>
+              <ProfilPoet />
             </RequirePoet>
           }
         />

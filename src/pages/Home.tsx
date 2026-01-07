@@ -67,12 +67,20 @@ export function Home() {
               Galerie
             </Link>
             {role === "poet" ? (
-              <Link
-                to="/scrie"
-                className="inline-flex items-center justify-center rounded-full border border-black bg-black px-6 py-2 text-xs uppercase tracking-[0.25em] text-white transition hover:bg-white hover:text-black"
-              >
-                Scrie o poezie
-              </Link>
+              <>
+                <Link
+                  to="/profil"
+                  className="inline-flex items-center justify-center rounded-full border border-black px-6 py-2 text-xs uppercase tracking-[0.25em] text-black transition hover:bg-black hover:text-white"
+                >
+                  Profil poet
+                </Link>
+                <Link
+                  to="/scrie"
+                  className="inline-flex items-center justify-center rounded-full border border-black bg-black px-6 py-2 text-xs uppercase tracking-[0.25em] text-white transition hover:bg-white hover:text-black"
+                >
+                  Scrie o poezie
+                </Link>
+              </>
             ) : null}
           </div>
         </header>

@@ -81,6 +81,11 @@ function sanitizeGallery(row) {
   };
 }
 
+function parseNumericId(value) {
+  const parsed = typeof value === "string" ? Number(value) : value;
+  return Number.isInteger(parsed) ? parsed : null;
+}
+
 async function ensureSchema() {
   await pool.query(`create table if not exists users (
     id serial primary key,
@@ -104,6 +109,27 @@ async function ensureSchema() {
     title text not null,
     content text not null,
     created_at timestamptz not null default now()
+  )`);
+  await pool.query(`create table if not exists poem_reads (
+    id serial primary key,
+    poem_id integer not null references poems(id) on delete cascade,
+    reader_id integer not null references users(id) on delete cascade,
+    created_at timestamptz not null default now(),
+    unique (poem_id, reader_id)
+  )`);
+  await pool.query(`create table if not exists poem_likes (
+    id serial primary key,
+    poem_id integer not null references poems(id) on delete cascade,
+    user_id integer not null references users(id) on delete cascade,
+    created_at timestamptz not null default now(),
+    unique (poem_id, user_id)
+  )`);
+  await pool.query(`create table if not exists poem_saves (
+    id serial primary key,
+    poem_id integer not null references poems(id) on delete cascade,
+    user_id integer not null references users(id) on delete cascade,
+    created_at timestamptz not null default now(),
+    unique (poem_id, user_id)
   )`);
   await pool.query(
     "alter table poems add column if not exists gallery_id integer references galleries(id) on delete set null"
@@ -461,6 +487,231 @@ app.delete("/api/poems/:id", async (req, res) => {
     return res.json({ ok: true });
   } catch (error) {
     return res.status(500).json({ error: "Eroare la stergere." });
+  }
+});
+
+app.post("/api/poems/:id/read", async (req, res) => {
+  const poemId = Number(req.params.id);
+  const readerId = parseNumericId(req.body?.readerId);
+
+  if (!Number.isInteger(poemId) || readerId === null) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  try {
+    const poemResult = await pool.query(
+      "select author_id from poems where id = $1",
+      [poemId]
+    );
+
+    if (poemResult.rowCount === 0) {
+      return res.status(404).json({ error: "Poezia nu a fost gasita." });
+    }
+
+    const authorId = poemResult.rows[0].author_id;
+    if (authorId === readerId) {
+      return res.json({ ok: true, ignored: true });
+    }
+
+    await pool.query(
+      "insert into poem_reads (poem_id, reader_id) values ($1, $2) on conflict do nothing",
+      [poemId, readerId]
+    );
+
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la salvare." });
+  }
+});
+
+app.post("/api/poems/:id/like", async (req, res) => {
+  const poemId = Number(req.params.id);
+  const userId = parseNumericId(req.body?.userId);
+
+  if (!Number.isInteger(poemId) || userId === null) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  try {
+    const poemResult = await pool.query(
+      "select author_id from poems where id = $1",
+      [poemId]
+    );
+
+    if (poemResult.rowCount === 0) {
+      return res.status(404).json({ error: "Poezia nu a fost gasita." });
+    }
+
+    const authorId = poemResult.rows[0].author_id;
+    if (authorId === userId) {
+      return res.json({ ok: true, ignored: true });
+    }
+
+    await pool.query(
+      "insert into poem_likes (poem_id, user_id) values ($1, $2) on conflict do nothing",
+      [poemId, userId]
+    );
+
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la salvare." });
+  }
+});
+
+app.delete("/api/poems/:id/like", async (req, res) => {
+  const poemId = Number(req.params.id);
+  const userId = parseNumericId(req.query.userId);
+
+  if (!Number.isInteger(poemId) || userId === null) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  try {
+    await pool.query(
+      "delete from poem_likes where poem_id = $1 and user_id = $2",
+      [poemId, userId]
+    );
+
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la stergere." });
+  }
+});
+
+app.post("/api/poems/:id/save", async (req, res) => {
+  const poemId = Number(req.params.id);
+  const userId = parseNumericId(req.body?.userId);
+
+  if (!Number.isInteger(poemId) || userId === null) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  try {
+    const poemResult = await pool.query(
+      "select author_id from poems where id = $1",
+      [poemId]
+    );
+
+    if (poemResult.rowCount === 0) {
+      return res.status(404).json({ error: "Poezia nu a fost gasita." });
+    }
+
+    const authorId = poemResult.rows[0].author_id;
+    if (authorId === userId) {
+      return res.json({ ok: true, ignored: true });
+    }
+
+    await pool.query(
+      "insert into poem_saves (poem_id, user_id) values ($1, $2) on conflict do nothing",
+      [poemId, userId]
+    );
+
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la salvare." });
+  }
+});
+
+app.delete("/api/poems/:id/save", async (req, res) => {
+  const poemId = Number(req.params.id);
+  const userId = parseNumericId(req.query.userId);
+
+  if (!Number.isInteger(poemId) || userId === null) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  try {
+    await pool.query(
+      "delete from poem_saves where poem_id = $1 and user_id = $2",
+      [poemId, userId]
+    );
+
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la stergere." });
+  }
+});
+
+app.get("/api/poets/:id/stats", async (req, res) => {
+  const poetId = Number(req.params.id);
+
+  if (!Number.isInteger(poetId)) {
+    return res.status(400).json({ error: "Id invalid." });
+  }
+
+  try {
+    const result = await pool.query(
+      `select
+        (select count(*) from poems where author_id = $1) as poem_count,
+        (select count(*) from poem_reads pr join poems p on p.id = pr.poem_id where p.author_id = $1) as reads,
+        (select count(distinct pr.reader_id) from poem_reads pr join poems p on p.id = pr.poem_id where p.author_id = $1) as readers,
+        (select count(*) from poem_likes pl join poems p on p.id = pl.poem_id where p.author_id = $1) as likes,
+        (select count(*) from poem_saves ps join poems p on p.id = ps.poem_id where p.author_id = $1) as saves,
+        (select max(created_at) from poems where author_id = $1) as last_published_at
+      `,
+      [poetId]
+    );
+
+    const row = result.rows[0] ?? {};
+    const lastPublished = row.last_published_at;
+    return res.json({
+      stats: {
+        poemCount: Number(row.poem_count ?? 0),
+        reads: Number(row.reads ?? 0),
+        readers: Number(row.readers ?? 0),
+        likes: Number(row.likes ?? 0),
+        saves: Number(row.saves ?? 0),
+        lastPublishedAt:
+          lastPublished instanceof Date
+            ? lastPublished.toISOString()
+            : lastPublished ?? null
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la incarcare." });
+  }
+});
+
+app.get("/api/users/:id/poem-interactions", async (req, res) => {
+  const userId = Number(req.params.id);
+  const rawPoemIds =
+    typeof req.query.poemIds === "string" ? req.query.poemIds : "";
+  const poemIds = rawPoemIds
+    .split(",")
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value));
+
+  if (!Number.isInteger(userId)) {
+    return res.status(400).json({ error: "Id invalid." });
+  }
+
+  if (poemIds.length === 0) {
+    return res.json({ liked: [], saved: [], read: [] });
+  }
+
+  try {
+    const [likedResult, savedResult, readResult] = await Promise.all([
+      pool.query(
+        "select poem_id from poem_likes where user_id = $1 and poem_id = any($2)",
+        [userId, poemIds]
+      ),
+      pool.query(
+        "select poem_id from poem_saves where user_id = $1 and poem_id = any($2)",
+        [userId, poemIds]
+      ),
+      pool.query(
+        "select poem_id from poem_reads where reader_id = $1 and poem_id = any($2)",
+        [userId, poemIds]
+      )
+    ]);
+
+    return res.json({
+      liked: likedResult.rows.map((row) => row.poem_id),
+      saved: savedResult.rows.map((row) => row.poem_id),
+      read: readResult.rows.map((row) => row.poem_id)
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la incarcare." });
   }
 });
 
