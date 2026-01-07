@@ -197,6 +197,45 @@ app.post("/api/poems", async (req, res) => {
   }
 });
 
+app.put("/api/poems/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const { title, content, authorId } = req.body ?? {};
+
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Id invalid." });
+  }
+
+  if (!title || !content) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  const normalizedTitle = String(title).trim();
+  const normalizedContent = String(content).trim();
+  const parsedAuthorId =
+    typeof authorId === "number" && Number.isInteger(authorId)
+      ? authorId
+      : null;
+
+  if (!normalizedTitle || !normalizedContent || !parsedAuthorId) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  try {
+    const result = await pool.query(
+      "update poems set title = $1, content = $2 where id = $3 and author_id = $4 returning id, title, content, created_at, author_id",
+      [normalizedTitle, normalizedContent, id, parsedAuthorId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Poezia nu a fost gasita." });
+    }
+
+    return res.json({ poem: sanitizePoem(result.rows[0]) });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la editare." });
+  }
+});
+
 app.delete("/api/poems/:id", async (req, res) => {
   const id = Number(req.params.id);
 

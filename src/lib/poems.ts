@@ -88,6 +88,30 @@ export async function createPoem({ title, content, authorId }: NewPoem) {
   return poem;
 }
 
+export async function updatePoem(
+  id: number,
+  { title, content, authorId }: NewPoem
+) {
+  const response = await fetch(`${API_URL}/api/poems/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, content, authorId })
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(payload?.error ?? "Eroare la editare.");
+  }
+
+  const poem = parsePoem(payload?.poem);
+  if (!poem) {
+    throw new Error("Raspuns invalid.");
+  }
+
+  return poem;
+}
+
 export async function deletePoem(id: number, authorId?: number | null) {
   const query =
     typeof authorId === "number" && Number.isFinite(authorId)

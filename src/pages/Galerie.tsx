@@ -6,6 +6,7 @@ import {
   buildMeta,
   deletePoem,
   fetchPoems,
+  updatePoem,
   type Poem
 } from "../lib/poems";
 
@@ -53,6 +54,7 @@ type DisplayPoem = {
   title: string;
   meta: string;
   excerpt: string;
+  content?: string;
   canDelete: boolean;
   id?: number;
 };
@@ -62,6 +64,11 @@ export function Galerie() {
   const [storedPoems, setStoredPoems] = useState<Poem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [editPoemId, setEditPoemId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editError, setEditError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -105,6 +112,12 @@ export function Galerie() {
     try {
       await deletePoem(poemId, user.id);
       setStoredPoems((items) => items.filter((poem) => poem.id !== poemId));
+      if (editPoemId === poemId) {
+        setEditPoemId(null);
+        setEditTitle("");
+        setEditContent("");
+        setEditError(null);
+      }
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
@@ -114,11 +127,62 @@ export function Galerie() {
     }
   }
 
+  function startEdit(poem: Poem) {
+    setEditPoemId(poem.id);
+    setEditTitle(poem.title);
+    setEditContent(poem.content);
+    setEditError(null);
+  }
+
+  function cancelEdit() {
+    setEditPoemId(null);
+    setEditTitle("");
+    setEditContent("");
+    setEditError(null);
+  }
+
+  async function handleSave(poemId: number) {
+    if (!user) {
+      setEditError("Trebuie sa fii autentificat.");
+      return;
+    }
+
+    const trimmedTitle = editTitle.trim();
+    const trimmedContent = editContent.trim();
+
+    if (!trimmedTitle || !trimmedContent) {
+      setEditError("Completeaza titlul si textul poeziei.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const updated = await updatePoem(poemId, {
+        title: trimmedTitle,
+        content: trimmedContent,
+        authorId: user.id
+      });
+      setStoredPoems((items) =>
+        items.map((poem) => (poem.id === poemId ? updated : poem))
+      );
+      cancelEdit();
+    } catch (saveError) {
+      setEditError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Eroare la editare."
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   const poems: DisplayPoem[] = [
     ...storedPoems.map((poem) => ({
       key: `user-${poem.id}`,
       id: poem.id,
       title: poem.title,
+      content: poem.content,
       meta: buildMeta(poem.createdAt, poem.content),
       excerpt: buildExcerpt(poem.content),
       canDelete: poem.authorId === user?.id
@@ -170,20 +234,86 @@ export function Galerie() {
                 {poem.meta}
               </p>
               <div className="mt-3 flex items-start justify-between gap-4">
-                <h2 className="text-xl font-semibold">{poem.title}</h2>
+                <h2 className="text-xl font-semibold">
+                  {editPoemId === poem.id ? editTitle || poem.title : poem.title}
+                </h2>
                 {poem.canDelete && poem.id !== undefined ? (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(poem.id)}
-                    className="text-[10px] uppercase tracking-[0.3em] text-zinc-500 transition hover:text-rose-600"
-                  >
-                    Sterge
-                  </button>
+                  <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.3em] text-zinc-500">
+                    {editPoemId === poem.id ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleSave(poem.id)}
+                          disabled={isSaving}
+                          className="transition hover:text-zinc-900 disabled:cursor-not-allowed disabled:text-zinc-400"
+                        >
+                          {isSaving ? "Salveaza..." : "Salveaza"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          className="transition hover:text-zinc-900"
+                        >
+                          Renunta
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = storedPoems.find(
+                              (item) => item.id === poem.id
+                            );
+                            if (current) {
+                              startEdit(current);
+                            }
+                          }}
+                          className="transition hover:text-zinc-900"
+                        >
+                          Editeaza
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(poem.id)}
+                          className="transition hover:text-rose-600"
+                        >
+                          Sterge
+                        </button>
+                      </>
+                    )}
+                  </div>
                 ) : null}
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-zinc-700">
-                {poem.excerpt}
-              </p>
+              {editPoemId === poem.id ? (
+                <div className="mt-4 grid gap-4">
+                  <label className="block">
+                    <span className="form-label">Titlu</span>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(event) => setEditTitle(event.target.value)}
+                      className="form-control"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="form-label">Textul poeziei</span>
+                    <textarea
+                      rows={8}
+                      value={editContent}
+                      onChange={(event) => setEditContent(event.target.value)}
+                      className="form-control min-h-[200px] resize-y"
+                    />
+                  </label>
+                  {editError ? (
+                    <p className="text-sm text-rose-600">{editError}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="mt-3 text-sm leading-relaxed text-zinc-700">
+                  {poem.excerpt}
+                </p>
+              )}
             </article>
           ))}
         </section>
