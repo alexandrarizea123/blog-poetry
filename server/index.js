@@ -2,6 +2,8 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import cors from "cors";
 import express from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -9,7 +11,12 @@ const { Pool } = pg;
 const PORT = process.env.PORT || 3001;
 const DATABASE_URL = process.env.DATABASE_URL;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:5173";
+const SERVE_STATIC = process.env.SERVE_STATIC === "true";
+const DB_CONNECT_RETRIES = Number(process.env.DB_CONNECT_RETRIES ?? 10);
+const DB_CONNECT_DELAY_MS = Number(process.env.DB_CONNECT_DELAY_MS ?? 1000);
 const allowedOrigins = CORS_ORIGIN.split(",").map((origin) => origin.trim());
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 if (!DATABASE_URL) {
   console.error("Missing DATABASE_URL environment variable.");
@@ -57,6 +64,14 @@ function sanitizePoem(row) {
 }
 
 async function ensureSchema() {
+  await pool.query(`create table if not exists users (
+    id serial primary key,
+    name text not null,
+    email text not null unique,
+    password_hash text not null,
+    role text not null check (role in ('poet', 'cititor')),
+    created_at timestamptz not null default now()
+  )`);
   await pool.query(`create table if not exists poems (
     id serial primary key,
     author_id integer references users(id) on delete set null,
@@ -64,6 +79,28 @@ async function ensureSchema() {
     content text not null,
     created_at timestamptz not null default now()
   )`);
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function connectWithRetry() {
+  for (let attempt = 1; attempt <= DB_CONNECT_RETRIES; attempt += 1) {
+    try {
+      await ensureSchema();
+      return;
+    } catch (error) {
+      const isLastAttempt = attempt === DB_CONNECT_RETRIES;
+      console.error(
+        `Database connection failed (attempt ${attempt}/${DB_CONNECT_RETRIES}).`
+      );
+      if (isLastAttempt) {
+        throw error;
+      }
+      await wait(DB_CONNECT_DELAY_MS);
+    }
+  }
 }
 
 app.get("/api/health", async (_req, res) => {
@@ -267,14 +304,30 @@ app.delete("/api/poems/:id", async (req, res) => {
   }
 });
 
+if (SERVE_STATIC) {
+  const distPath = path.resolve(__dirname, "../dist");
+
+  app.use(express.static(distPath));
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) {
+      return next();
+    }
+
+    return res.sendFile(path.join(distPath, "index.html"));
+  });
+}
+
 async function startServer() {
   try {
-    await ensureSchema();
+    await connectWithRetry();
     app.listen(PORT, () => {
       console.log(`Auth server running on http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error("Failed to start server.");
+    if (error instanceof Error) {
+      console.error(error.message);
+    }
     process.exit(1);
   }
 }

@@ -64,7 +64,7 @@ export async function fetchPoems(): Promise<Poem[]> {
 
   return payload.poems
     .map(parsePoem)
-    .filter((poem): poem is Poem => Boolean(poem));
+    .filter((poem: Poem | null): poem is Poem => Boolean(poem));
 }
 
 export async function createPoem({ title, content, authorId }: NewPoem) {

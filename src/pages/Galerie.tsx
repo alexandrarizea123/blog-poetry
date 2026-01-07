@@ -243,7 +243,12 @@ export function Galerie() {
                       <>
                         <button
                           type="button"
-                          onClick={() => handleSave(poem.id)}
+                          onClick={() => {
+                            if (poem.id === undefined) {
+                              return;
+                            }
+                            handleSave(poem.id);
+                          }}
                           disabled={isSaving}
                           className="transition hover:text-zinc-900 disabled:cursor-not-allowed disabled:text-zinc-400"
                         >
@@ -275,7 +280,12 @@ export function Galerie() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(poem.id)}
+                          onClick={() => {
+                            if (poem.id === undefined) {
+                              return;
+                            }
+                            handleDelete(poem.id);
+                          }}
                           className="transition hover:text-rose-600"
                         >
                           Sterge
