@@ -6,12 +6,14 @@ export type Poem = {
   content: string;
   createdAt: string;
   authorId: number | null;
+  galleryId: number | null;
 };
 
 type NewPoem = {
   title: string;
   content: string;
   authorId?: number | null;
+  galleryId?: number | null;
 };
 
 const WORDS_PER_MINUTE = 120;
@@ -29,7 +31,7 @@ function parsePoem(payload: unknown): Poem | null {
     return null;
   }
 
-  const { id, title, content, createdAt, authorId } = payload;
+  const { id, title, content, createdAt, authorId, galleryId } = payload;
 
   if (
     (typeof id !== "number" && typeof id !== "string") ||
@@ -49,13 +51,18 @@ function parsePoem(payload: unknown): Poem | null {
     typeof authorId === "number" && Number.isFinite(authorId)
       ? authorId
       : null;
+  const normalizedGalleryId =
+    typeof galleryId === "number" && Number.isFinite(galleryId)
+      ? galleryId
+      : null;
 
   return {
     id: normalizedId,
     title,
     content,
     createdAt,
-    authorId: normalizedAuthorId
+    authorId: normalizedAuthorId,
+    galleryId: normalizedGalleryId
   };
 }
 
@@ -76,11 +83,16 @@ export async function fetchPoems(): Promise<Poem[]> {
     .filter((poem: Poem | null): poem is Poem => Boolean(poem));
 }
 
-export async function createPoem({ title, content, authorId }: NewPoem) {
+export async function createPoem({
+  title,
+  content,
+  authorId,
+  galleryId
+}: NewPoem) {
   const response = await fetch(`${API_URL}/api/poems`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, content, authorId })
+    body: JSON.stringify({ title, content, authorId, galleryId })
   });
 
   const payload = await response.json().catch(() => null);
@@ -99,12 +111,12 @@ export async function createPoem({ title, content, authorId }: NewPoem) {
 
 export async function updatePoem(
   id: number,
-  { title, content, authorId }: NewPoem
+  { title, content, authorId, galleryId }: NewPoem
 ) {
   const response = await fetch(`${API_URL}/api/poems/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ title, content, authorId })
+    body: JSON.stringify({ title, content, authorId, galleryId })
   });
 
   const payload = await response.json().catch(() => null);

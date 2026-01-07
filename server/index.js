@@ -64,6 +64,19 @@ function sanitizePoem(row) {
       row.created_at instanceof Date
         ? row.created_at.toISOString()
         : row.created_at,
+    authorId: row.author_id ?? null,
+    galleryId: row.gallery_id ?? null
+  };
+}
+
+function sanitizeGallery(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    createdAt:
+      row.created_at instanceof Date
+        ? row.created_at.toISOString()
+        : row.created_at,
     authorId: row.author_id ?? null
   };
 }
@@ -77,13 +90,24 @@ async function ensureSchema() {
     role text not null check (role in ('poet', 'cititor')),
     created_at timestamptz not null default now()
   )`);
+  await pool.query(`create table if not exists galleries (
+    id serial primary key,
+    author_id integer not null references users(id) on delete cascade,
+    name text not null,
+    created_at timestamptz not null default now(),
+    unique (author_id, name)
+  )`);
   await pool.query(`create table if not exists poems (
     id serial primary key,
     author_id integer references users(id) on delete set null,
+    gallery_id integer references galleries(id) on delete set null,
     title text not null,
     content text not null,
     created_at timestamptz not null default now()
   )`);
+  await pool.query(
+    "alter table poems add column if not exists gallery_id integer references galleries(id) on delete set null"
+  );
 }
 
 function wait(ms) {
@@ -197,10 +221,129 @@ app.post("/api/logout", (_req, res) => {
   return res.json({ ok: true });
 });
 
+app.get("/api/galleries", async (req, res) => {
+  const authorIdParam =
+    typeof req.query.authorId === "string"
+      ? Number(req.query.authorId)
+      : null;
+  const hasAuthorId = Number.isInteger(authorIdParam);
+
+  try {
+    const result = await pool.query(
+      hasAuthorId
+        ? "select id, name, author_id, created_at from galleries where author_id = $1 order by created_at desc"
+        : "select id, name, author_id, created_at from galleries order by created_at desc",
+      hasAuthorId ? [authorIdParam] : []
+    );
+
+    return res.json({ galleries: result.rows.map(sanitizeGallery) });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la incarcare." });
+  }
+});
+
+app.post("/api/galleries", async (req, res) => {
+  const { name, authorId } = req.body ?? {};
+
+  const normalizedName = typeof name === "string" ? name.trim() : "";
+  const parsedAuthorId =
+    typeof authorId === "number" && Number.isInteger(authorId)
+      ? authorId
+      : null;
+
+  if (!normalizedName || parsedAuthorId === null) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  try {
+    const result = await pool.query(
+      "insert into galleries (name, author_id) values ($1, $2) returning id, name, author_id, created_at",
+      [normalizedName, parsedAuthorId]
+    );
+
+    return res.status(201).json({ gallery: sanitizeGallery(result.rows[0]) });
+  } catch (error) {
+    if (error?.code === "23505") {
+      return res.status(409).json({ error: "Galerie existenta." });
+    }
+    return res.status(500).json({ error: "Eroare la salvare." });
+  }
+});
+
+app.put("/api/galleries/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const { name, authorId } = req.body ?? {};
+
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Id invalid." });
+  }
+
+  const normalizedName = typeof name === "string" ? name.trim() : "";
+  const parsedAuthorId =
+    typeof authorId === "number" && Number.isInteger(authorId)
+      ? authorId
+      : null;
+
+  if (!normalizedName || parsedAuthorId === null) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  try {
+    const result = await pool.query(
+      "update galleries set name = $1 where id = $2 and author_id = $3 returning id, name, author_id, created_at",
+      [normalizedName, id, parsedAuthorId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Galeria nu a fost gasita." });
+    }
+
+    return res.json({ gallery: sanitizeGallery(result.rows[0]) });
+  } catch (error) {
+    if (error?.code === "23505") {
+      return res.status(409).json({ error: "Galerie existenta." });
+    }
+    return res.status(500).json({ error: "Eroare la editare." });
+  }
+});
+
+app.delete("/api/galleries/:id", async (req, res) => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id)) {
+    return res.status(400).json({ error: "Id invalid." });
+  }
+
+  const authorIdParam =
+    typeof req.query.authorId === "string"
+      ? Number(req.query.authorId)
+      : null;
+  const hasAuthorId = Number.isInteger(authorIdParam);
+
+  if (!hasAuthorId) {
+    return res.status(400).json({ error: "Date incomplete." });
+  }
+
+  try {
+    const result = await pool.query(
+      "delete from galleries where id = $1 and author_id = $2 returning id",
+      [id, authorIdParam]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Galeria nu a fost gasita." });
+    }
+
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Eroare la stergere." });
+  }
+});
+
 app.get("/api/poems", async (_req, res) => {
   try {
     const result = await pool.query(
-      "select id, title, content, created_at, author_id from poems order by created_at desc"
+      "select id, title, content, created_at, author_id, gallery_id from poems order by created_at desc"
     );
 
     return res.json({ poems: result.rows.map(sanitizePoem) });
@@ -210,7 +353,7 @@ app.get("/api/poems", async (_req, res) => {
 });
 
 app.post("/api/poems", async (req, res) => {
-  const { title, content, authorId } = req.body ?? {};
+  const { title, content, authorId, galleryId } = req.body ?? {};
 
   if (!title || !content) {
     return res.status(400).json({ error: "Date incomplete." });
@@ -222,6 +365,10 @@ app.post("/api/poems", async (req, res) => {
     typeof authorId === "number" && Number.isInteger(authorId)
       ? authorId
       : null;
+  const parsedGalleryId =
+    typeof galleryId === "number" && Number.isInteger(galleryId)
+      ? galleryId
+      : null;
 
   if (!normalizedTitle || !normalizedContent) {
     return res.status(400).json({ error: "Date incomplete." });
@@ -229,8 +376,8 @@ app.post("/api/poems", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "insert into poems (title, content, author_id) values ($1, $2, $3) returning id, title, content, created_at, author_id",
-      [normalizedTitle, normalizedContent, parsedAuthorId]
+      "insert into poems (title, content, author_id, gallery_id) values ($1, $2, $3, $4) returning id, title, content, created_at, author_id, gallery_id",
+      [normalizedTitle, normalizedContent, parsedAuthorId, parsedGalleryId]
     );
 
     return res.status(201).json({ poem: sanitizePoem(result.rows[0]) });
@@ -241,7 +388,7 @@ app.post("/api/poems", async (req, res) => {
 
 app.put("/api/poems/:id", async (req, res) => {
   const id = Number(req.params.id);
-  const { title, content, authorId } = req.body ?? {};
+  const { title, content, authorId, galleryId } = req.body ?? {};
 
   if (!Number.isInteger(id)) {
     return res.status(400).json({ error: "Id invalid." });
@@ -257,6 +404,10 @@ app.put("/api/poems/:id", async (req, res) => {
     typeof authorId === "number" && Number.isInteger(authorId)
       ? authorId
       : null;
+  const parsedGalleryId =
+    typeof galleryId === "number" && Number.isInteger(galleryId)
+      ? galleryId
+      : null;
 
   if (!normalizedTitle || !normalizedContent || parsedAuthorId === null) {
     return res.status(400).json({ error: "Date incomplete." });
@@ -264,8 +415,8 @@ app.put("/api/poems/:id", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "update poems set title = $1, content = $2 where id = $3 and author_id = $4 returning id, title, content, created_at, author_id",
-      [normalizedTitle, normalizedContent, id, parsedAuthorId]
+      "update poems set title = $1, content = $2, gallery_id = $3 where id = $4 and author_id = $5 returning id, title, content, created_at, author_id, gallery_id",
+      [normalizedTitle, normalizedContent, parsedGalleryId, id, parsedAuthorId]
     );
 
     if (result.rowCount === 0) {

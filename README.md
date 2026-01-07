@@ -5,6 +5,7 @@
 - roluri: poet / cititor
 - creare, editare si stergere poezii
 - galerie cu poezii existente
+- galerii multiple pentru categorii de poezii
 - UI alb-negru cu doodles subtile pe fundal
 
 ## Mockups
@@ -47,10 +48,14 @@ Frontend:
 
 ## Endpoints API
 - `GET /api/health` - sanity check DB
+- `GET /api/galleries` - lista galerii (optional `authorId`)
+- `POST /api/galleries` - body: `{ name, authorId }`
+- `PUT /api/galleries/:id` - body: `{ name, authorId }`
+- `DELETE /api/galleries/:id` - query: `authorId`
 - `POST /api/register` - body: `{ name, email, password, role }`
 - `POST /api/login` - body: `{ email, password, role? }`
 - `POST /api/logout` - logout local
 - `GET /api/poems` - lista poezii
-- `POST /api/poems` - body: `{ title, content, authorId? }`
-- `PUT /api/poems/:id` - body: `{ title, content, authorId }`
+- `POST /api/poems` - body: `{ title, content, authorId?, galleryId? }`
+- `PUT /api/poems/:id` - body: `{ title, content, authorId, galleryId? }`
 - `DELETE /api/poems/:id` - optional query `authorId`

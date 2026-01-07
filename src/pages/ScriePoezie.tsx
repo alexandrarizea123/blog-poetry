@@ -1,14 +1,101 @@
 import type { FormEvent } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { DropdownSelect } from "../components/DropdownSelect";
+import { createGallery, fetchGalleries, type Gallery } from "../lib/galleries";
 import { createPoem } from "../lib/poems";
 
 export function ScriePoezie() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingGallery, setIsCreatingGallery] = useState(false);
+  const [galleries, setGalleries] = useState<Gallery[]>([]);
+  const [selectedGalleryId, setSelectedGalleryId] = useState("");
+  const [newGalleryName, setNewGalleryName] = useState("");
   const { user } = useAuth();
+
+  const galleryOptions = [
+    { value: "", label: "Fara galerie" },
+    ...galleries.map((gallery) => ({
+      value: String(gallery.id),
+      label: gallery.name
+    }))
+  ];
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadGalleries() {
+      if (!user) {
+        return;
+      }
+
+      try {
+        const list = await fetchGalleries(user.id);
+        if (isActive) {
+          setGalleries(list);
+          setGalleryError(null);
+        }
+      } catch (loadError) {
+        if (isActive) {
+          setGalleryError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Nu am putut incarca galeriile."
+          );
+        }
+      }
+    }
+
+    loadGalleries();
+
+    return () => {
+      isActive = false;
+    };
+  }, [user]);
+
+  async function handleCreateGallery() {
+    if (!user) {
+      setGalleryError("Trebuie sa fii autentificat.");
+      return;
+    }
+
+    const normalizedName = newGalleryName.trim();
+    if (!normalizedName) {
+      setGalleryError("Scrie un nume pentru galerie.");
+      return;
+    }
+
+    if (
+      galleries.some(
+        (gallery) =>
+          gallery.name.toLowerCase() === normalizedName.toLowerCase()
+      )
+    ) {
+      setGalleryError("Exista deja o galerie cu acest nume.");
+      return;
+    }
+
+    try {
+      setIsCreatingGallery(true);
+      const created = await createGallery(normalizedName, user.id);
+      setGalleries((items) => [created, ...items]);
+      setSelectedGalleryId(String(created.id));
+      setNewGalleryName("");
+      setGalleryError(null);
+    } catch (createError) {
+      setGalleryError(
+        createError instanceof Error
+          ? createError.message
+          : "Nu am putut salva galeria."
+      );
+    } finally {
+      setIsCreatingGallery(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -16,6 +103,10 @@ export function ScriePoezie() {
     const formData = new FormData(event.currentTarget);
     const title = String(formData.get("title") ?? "").trim();
     const content = String(formData.get("content") ?? "").trim();
+    const parsedGalleryId = Number(selectedGalleryId);
+    const galleryId = Number.isFinite(parsedGalleryId)
+      ? parsedGalleryId
+      : null;
 
     if (!user) {
       setError("Trebuie sa fii autentificat.");
@@ -30,8 +121,9 @@ export function ScriePoezie() {
     setError(null);
     try {
       setIsSubmitting(true);
-      await createPoem({ title, content, authorId: user.id });
-      navigate("/galerie");
+      await createPoem({ title, content, authorId: user.id, galleryId });
+      const targetGallery = galleryId ? `/galerie/${galleryId}` : "/galerie/fara";
+      navigate(targetGallery);
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -84,6 +176,35 @@ export function ScriePoezie() {
             </div>
 
             <form onSubmit={handleSubmit} className="mt-8 grid gap-6">
+              <DropdownSelect
+                label="Galerie"
+                value={selectedGalleryId}
+                options={galleryOptions}
+                onChange={setSelectedGalleryId}
+              />
+
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <input
+                  type="text"
+                  value={newGalleryName}
+                  onChange={(event) => setNewGalleryName(event.target.value)}
+                  placeholder="Nume galerie noua"
+                  className="form-control"
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateGallery}
+                  disabled={isCreatingGallery}
+                  className="inline-flex items-center justify-center rounded-full border border-black px-6 py-3 text-xs uppercase tracking-[0.25em] text-black transition hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isCreatingGallery ? "Se creeaza..." : "Creeaza galerie"}
+                </button>
+              </div>
+
+              {galleryError ? (
+                <p className="text-sm text-black">{galleryError}</p>
+              ) : null}
+
               <label className="block">
                 <span className="form-label">Titlu</span>
                 <input

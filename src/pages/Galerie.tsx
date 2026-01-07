@@ -1,200 +1,167 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { curatedPoems } from "../lib/curatedPoems";
 import {
-  buildExcerpt,
-  buildMeta,
-  deletePoem,
-  fetchPoems,
-  updatePoem,
-  type Poem
-} from "../lib/poems";
-
-const curatedPoems = [
-  {
-    title: "Ploaie pe strada goala",
-    meta: "dimineata, 3 min",
-    excerpt:
-      "Cand orasul inca doarme, trotuarul tine minte pasii. Picaturile fac ordine in lumina."
-  },
-  {
-    title: "Focul mic",
-    meta: "seara, 2 min",
-    excerpt:
-      "In palma, o scanteie. In camera, o liniste care se apropie. Totul incape intr-un foc mic."
-  },
-  {
-    title: "Zidul cu ivy",
-    meta: "amiaz, 4 min",
-    excerpt:
-      "Peretele isi tine umbra aproape. Frunzele se leaga una de alta, ca o scrisoare fara nume."
-  },
-  {
-    title: "Statie fara ora",
-    meta: "noapte, 3 min",
-    excerpt:
-      "Nu mai sunt trenuri, doar vant. Bancile asculta cum trece timpul, fara sa-l intrebe nimeni."
-  },
-  {
-    title: "Ceainicul",
-    meta: "dimineata, 2 min",
-    excerpt:
-      "Aburul urca incet. Pe geam, o linie care nu se grabeste, ca o promisiune."
-  },
-  {
-    title: "Carti pe podea",
-    meta: "seara, 4 min",
-    excerpt:
-      "Cuvintele cad dintre pagini, se rostogolesc. Le adun si le pun la loc, una cate una."
-  }
-];
-
-type DisplayPoem = {
-  key: string;
-  title: string;
-  meta: string;
-  excerpt: string;
-  content?: string;
-  canDelete: boolean;
-  id?: number;
-};
+  deleteGallery,
+  fetchGalleries,
+  updateGallery,
+  type Gallery
+} from "../lib/galleries";
+import { fetchPoems, type Poem } from "../lib/poems";
 
 export function Galerie() {
   const { user } = useAuth();
   const [storedPoems, setStoredPoems] = useState<Poem[]>([]);
+  const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [galleryError, setGalleryError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [editPoemId, setEditPoemId] = useState<number | null>(null);
-  const [editTitle, setEditTitle] = useState("");
-  const [editContent, setEditContent] = useState("");
-  const [editError, setEditError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [editGalleryId, setEditGalleryId] = useState<number | null>(null);
+  const [editGalleryName, setEditGalleryName] = useState("");
+  const [editGalleryError, setEditGalleryError] = useState<string | null>(null);
+  const [isSavingGallery, setIsSavingGallery] = useState(false);
+  const [deletingGalleryId, setDeletingGalleryId] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
     let isActive = true;
 
-    async function loadPoems() {
-      try {
-        setIsLoading(true);
-        const poems = await fetchPoems();
-        if (isActive) {
-          setStoredPoems(poems);
-          setError(null);
-        }
-      } catch (loadError) {
-        if (isActive) {
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Eroare la incarcare."
-          );
-        }
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
+    async function loadData() {
+      setIsLoading(true);
+
+      const [poemsResult, galleriesResult] = await Promise.allSettled([
+        fetchPoems(),
+        fetchGalleries()
+      ]);
+
+      if (!isActive) {
+        return;
       }
+
+      if (poemsResult.status === "fulfilled") {
+        setStoredPoems(poemsResult.value);
+        setError(null);
+      } else {
+        setError(
+          poemsResult.reason instanceof Error
+            ? poemsResult.reason.message
+            : "Eroare la incarcare."
+        );
+      }
+
+      if (galleriesResult.status === "fulfilled") {
+        setGalleries(galleriesResult.value);
+        setGalleryError(null);
+      } else {
+        setGalleryError(
+          galleriesResult.reason instanceof Error
+            ? galleriesResult.reason.message
+            : "Nu am putut incarca galeriile."
+        );
+      }
+
+      setIsLoading(false);
     }
 
-    loadPoems();
+    loadData();
 
     return () => {
       isActive = false;
     };
   }, []);
 
-  async function handleDelete(poemId: number) {
-    if (!user) {
-      setError("Trebuie sa fii autentificat.");
-      return;
-    }
-
-    try {
-      await deletePoem(poemId, user.id);
-      setStoredPoems((items) => items.filter((poem) => poem.id !== poemId));
-      if (editPoemId === poemId) {
-        setEditPoemId(null);
-        setEditTitle("");
-        setEditContent("");
-        setEditError(null);
+  const poemCountByGalleryId = useMemo(() => {
+    const counts = new Map<number, number>();
+    storedPoems.forEach((poem) => {
+      if (poem.galleryId) {
+        counts.set(poem.galleryId, (counts.get(poem.galleryId) ?? 0) + 1);
       }
-    } catch (deleteError) {
-      setError(
-        deleteError instanceof Error
-          ? deleteError.message
-          : "Eroare la stergere."
-      );
-    }
+    });
+    return counts;
+  }, [storedPoems]);
+
+  const unassignedCount = useMemo(() => {
+    return storedPoems.filter((poem) => !poem.galleryId).length;
+  }, [storedPoems]);
+
+  const canManageGalleries = user?.role === "poet";
+
+  function startGalleryEdit(gallery: Gallery) {
+    setEditGalleryId(gallery.id);
+    setEditGalleryName(gallery.name);
+    setEditGalleryError(null);
   }
 
-  function startEdit(poem: Poem) {
-    setEditPoemId(poem.id);
-    setEditTitle(poem.title);
-    setEditContent(poem.content);
-    setEditError(null);
+  function cancelGalleryEdit() {
+    setEditGalleryId(null);
+    setEditGalleryName("");
+    setEditGalleryError(null);
   }
 
-  function cancelEdit() {
-    setEditPoemId(null);
-    setEditTitle("");
-    setEditContent("");
-    setEditError(null);
-  }
-
-  async function handleSave(poemId: number) {
+  async function handleSaveGallery(galleryId: number) {
     if (!user) {
-      setEditError("Trebuie sa fii autentificat.");
+      setEditGalleryError("Trebuie sa fii autentificat.");
       return;
     }
 
-    const trimmedTitle = editTitle.trim();
-    const trimmedContent = editContent.trim();
-
-    if (!trimmedTitle || !trimmedContent) {
-      setEditError("Completeaza titlul si textul poeziei.");
+    const normalizedName = editGalleryName.trim();
+    if (!normalizedName) {
+      setEditGalleryError("Completeaza numele galeriei.");
       return;
     }
 
     try {
-      setIsSaving(true);
-      const updated = await updatePoem(poemId, {
-        title: trimmedTitle,
-        content: trimmedContent,
-        authorId: user.id
-      });
-      setStoredPoems((items) =>
-        items.map((poem) => (poem.id === poemId ? updated : poem))
+      setIsSavingGallery(true);
+      const updated = await updateGallery(galleryId, normalizedName, user.id);
+      setGalleries((items) =>
+        items.map((gallery) => (gallery.id === galleryId ? updated : gallery))
       );
-      cancelEdit();
+      cancelGalleryEdit();
     } catch (saveError) {
-      setEditError(
+      setEditGalleryError(
         saveError instanceof Error
           ? saveError.message
           : "Eroare la editare."
       );
     } finally {
-      setIsSaving(false);
+      setIsSavingGallery(false);
     }
   }
 
-  const poems: DisplayPoem[] = [
-    ...storedPoems.map((poem) => ({
-      key: `user-${poem.id}`,
-      id: poem.id,
-      title: poem.title,
-      content: poem.content,
-      meta: buildMeta(poem.createdAt, poem.content),
-      excerpt: buildExcerpt(poem.content),
-      canDelete: poem.authorId === user?.id
-    })),
-    ...curatedPoems.map((poem, index) => ({
-      key: `curated-${index}`,
-      title: poem.title,
-      meta: poem.meta,
-      excerpt: poem.excerpt,
-      canDelete: false
-    }))
-  ];
+  async function handleDeleteGallery(galleryId: number) {
+    if (!user) {
+      setGalleryError("Trebuie sa fii autentificat.");
+      return;
+    }
+
+    if (!window.confirm("Sigur vrei sa stergi aceasta galerie?")) {
+      return;
+    }
+
+    try {
+      setDeletingGalleryId(galleryId);
+      await deleteGallery(galleryId, user.id);
+      setGalleries((items) => items.filter((gallery) => gallery.id !== galleryId));
+      setStoredPoems((items) =>
+        items.map((poem) =>
+          poem.galleryId === galleryId ? { ...poem, galleryId: null } : poem
+        )
+      );
+      if (editGalleryId === galleryId) {
+        cancelGalleryEdit();
+      }
+    } catch (deleteError) {
+      setGalleryError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Eroare la stergere."
+      );
+    } finally {
+      setDeletingGalleryId(null);
+    }
+  }
 
   return (
     <main className="min-h-screen text-black">
@@ -204,7 +171,7 @@ export function Galerie() {
             galerie
           </p>
           <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
-            Toate poeziile
+            Galerii de poezie
           </h1>
           <div className="mt-6">
             <Link
@@ -216,63 +183,114 @@ export function Galerie() {
           </div>
         </header>
 
-        <section className="mt-10 grid gap-6 sm:grid-cols-2">
+        <section aria-labelledby="galleries-title" className="mt-10">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 id="galleries-title" className="text-2xl font-semibold">
+              Galerii
+            </h2>
+            <p className="text-xs uppercase tracking-[0.3em] text-black/60">
+              {galleries.length} galerii
+            </p>
+          </div>
+
+          {galleryError ? (
+            <p className="mt-4 text-sm text-black/70">{galleryError}</p>
+          ) : null}
           {error ? (
-            <p className="text-sm text-black sm:col-span-2">{error}</p>
+            <p className="mt-4 text-sm text-black/70">{error}</p>
           ) : null}
           {isLoading ? (
-            <p className="text-sm text-black/70 sm:col-span-2">
-              Se incarca poeziile...
+            <p className="mt-4 text-sm text-black/70">Se incarca galeriile...</p>
+          ) : null}
+          {!isLoading && galleries.length === 0 ? (
+            <p className="mt-4 text-sm text-black/70">
+              Nu exista galerii salvate.
             </p>
           ) : null}
-          {poems.map((poem) => (
-            <article
-              key={poem.key}
-              className="rounded-2xl border border-black/20 bg-white p-6 shadow-[0_14px_35px_-28px_rgba(0,0,0,0.45)]"
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <Link
+              to="/galerie/toate"
+              className="rounded-2xl border border-black/20 bg-white p-5 text-left shadow-[0_14px_35px_-28px_rgba(0,0,0,0.45)] transition hover:border-black/60"
             >
-              <p className="text-xs uppercase tracking-[0.3em] text-black/60">
-                {poem.meta}
+              <p className="text-[10px] uppercase tracking-[0.3em] text-black/60">
+                selectie
               </p>
-              <div className="mt-3 flex items-start justify-between gap-4">
-                <h2 className="text-xl font-semibold">
-                  {editPoemId === poem.id ? editTitle || poem.title : poem.title}
-                </h2>
-                {poem.canDelete && poem.id !== undefined ? (
-                  <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.3em] text-black/60">
-                    {editPoemId === poem.id ? (
-                      <>
+              <h3 className="mt-2 text-lg font-semibold">Toate poeziile</h3>
+              <p className="mt-3 text-xs uppercase tracking-[0.3em] text-black/50">
+                {storedPoems.length + curatedPoems.length} poezii
+              </p>
+            </Link>
+
+            {unassignedCount ? (
+              <Link
+                to="/galerie/fara"
+                className="rounded-2xl border border-black/20 bg-white p-5 text-left shadow-[0_14px_35px_-28px_rgba(0,0,0,0.45)] transition hover:border-black/60"
+              >
+                <p className="text-[10px] uppercase tracking-[0.3em] text-black/60">
+                  selectie
+                </p>
+                <h3 className="mt-2 text-lg font-semibold">Fara galerie</h3>
+                <p className="mt-3 text-xs uppercase tracking-[0.3em] text-black/50">
+                  {unassignedCount} poezii
+                </p>
+              </Link>
+            ) : null}
+
+            {galleries.map((gallery) => (
+              <div
+                key={gallery.id}
+                className="rounded-2xl border border-black/20 bg-white p-5 text-left shadow-[0_14px_35px_-28px_rgba(0,0,0,0.45)]"
+              >
+                <p className="text-[10px] uppercase tracking-[0.3em] text-black/60">
+                  galerie
+                </p>
+                {editGalleryId === gallery.id ? (
+                  <div className="mt-3 grid gap-3">
+                    <input
+                      type="text"
+                      value={editGalleryName}
+                      onChange={(event) => setEditGalleryName(event.target.value)}
+                      className="form-control"
+                    />
+                    {editGalleryError ? (
+                      <p className="text-sm text-black">{editGalleryError}</p>
+                    ) : null}
+                    <div className="flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-[0.3em] text-black/60">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveGallery(gallery.id)}
+                        disabled={isSavingGallery}
+                        className="transition hover:text-black disabled:cursor-not-allowed disabled:text-black/40"
+                      >
+                        {isSavingGallery ? "Salveaza..." : "Salveaza"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelGalleryEdit}
+                        className="transition hover:text-black"
+                      >
+                        Renunta
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <Link
+                      to={`/galerie/${gallery.id}`}
+                      className="mt-2 inline-flex text-lg font-semibold transition hover:text-black/70"
+                    >
+                      {gallery.name}
+                    </Link>
+                    <p className="mt-3 text-xs uppercase tracking-[0.3em] text-black/50">
+                      {poemCountByGalleryId.get(gallery.id) ?? 0} poezii
+                    </p>
+                    {canManageGalleries ? (
+                      <div className="mt-4 flex items-center gap-3 text-[10px] uppercase tracking-[0.3em] text-black/60">
                         <button
                           type="button"
                           onClick={() => {
-                            if (poem.id === undefined) {
-                              return;
-                            }
-                            handleSave(poem.id);
-                          }}
-                          disabled={isSaving}
-                          className="transition hover:text-black disabled:cursor-not-allowed disabled:text-black/40"
-                        >
-                          {isSaving ? "Salveaza..." : "Salveaza"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={cancelEdit}
-                          className="transition hover:text-black"
-                        >
-                          Renunta
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const current = storedPoems.find(
-                              (item) => item.id === poem.id
-                            );
-                            if (current) {
-                              startEdit(current);
-                            }
+                            startGalleryEdit(gallery);
                           }}
                           className="transition hover:text-black"
                         >
@@ -281,51 +299,22 @@ export function Galerie() {
                         <button
                           type="button"
                           onClick={() => {
-                            if (poem.id === undefined) {
-                              return;
-                            }
-                            handleDelete(poem.id);
+                            handleDeleteGallery(gallery.id);
                           }}
-                          className="transition hover:text-black"
+                          disabled={deletingGalleryId === gallery.id}
+                          className="transition hover:text-black disabled:cursor-not-allowed disabled:text-black/40"
                         >
-                          Sterge
+                          {deletingGalleryId === gallery.id
+                            ? "Sterge..."
+                            : "Sterge"}
                         </button>
-                      </>
-                    )}
-                  </div>
-                ) : null}
+                      </div>
+                    ) : null}
+                  </>
+                )}
               </div>
-              {editPoemId === poem.id ? (
-                <div className="mt-4 grid gap-4">
-                  <label className="block">
-                    <span className="form-label">Titlu</span>
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(event) => setEditTitle(event.target.value)}
-                      className="form-control"
-                    />
-                  </label>
-                  <label className="block">
-                    <span className="form-label">Textul poeziei</span>
-                    <textarea
-                      rows={8}
-                      value={editContent}
-                      onChange={(event) => setEditContent(event.target.value)}
-                      className="form-control min-h-[200px] resize-y"
-                    />
-                  </label>
-                  {editError ? (
-                    <p className="text-sm text-black">{editError}</p>
-                  ) : null}
-                </div>
-              ) : (
-                <p className="mt-3 text-sm leading-relaxed text-black/80">
-                  {poem.excerpt}
-                </p>
-              )}
-            </article>
-          ))}
+            ))}
+          </div>
         </section>
       </div>
     </main>
