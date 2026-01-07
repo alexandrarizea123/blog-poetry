@@ -12,8 +12,8 @@
 - UI alb-negru cu doodles subtile pe fundal
 
 ## Mockups
-![Homepage Jurnal Poezie](images/homepage-jurnal-poezie.png)
-![Scrie o poezie](images/scrie-o-poezie.png)
+![Homepage Jurnal Poezie](images/dashboard.png)
+![Scrie o poezie](images/poezie.png)
 
 ## Cerinte
 - Node.js 20+
