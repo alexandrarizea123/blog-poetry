@@ -6,6 +6,9 @@
 - creare, editare si stergere poezii
 - galerie cu poezii existente
 - galerii multiple pentru categorii de poezii
+- profil poet cu statistici (citiri, aprecieri, salvari) si badge-uri
+- interactiuni cititor: citit, apreciat, salvat
+- contorizare cititori unici per poet
 - UI alb-negru cu doodles subtile pe fundal
 
 ## Mockups
@@ -59,3 +62,10 @@ Frontend:
 - `POST /api/poems` - corp: `{ title, content, authorId?, galleryId? }`
 - `PUT /api/poems/:id` - corp: `{ title, content, authorId, galleryId? }`
 - `DELETE /api/poems/:id` - parametru optional: `authorId`
+- `POST /api/poems/:id/read` - corp: `{ readerId }`
+- `POST /api/poems/:id/like` - corp: `{ userId }`
+- `DELETE /api/poems/:id/like` - parametru: `userId`
+- `POST /api/poems/:id/save` - corp: `{ userId }`
+- `DELETE /api/poems/:id/save` - parametru: `userId`
+- `GET /api/poets/:id/stats` - statistici agregate pentru poet
+- `GET /api/users/:id/poem-interactions` - query: `poemIds=1,2,3`
