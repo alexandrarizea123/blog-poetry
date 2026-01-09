@@ -48,9 +48,9 @@ docker compose up db -d
 *Nota: Baza de date va fi accesibila pe portul `5435`.*
 
 ### 2. Configurare Backend
-Navigheaza in folderul `server` si configureaza variabilele de mediu:
+Navigheaza in folderul `backend` si configureaza variabilele de mediu:
 ```bash
-cd server
+cd backend
 cp .env.example .env
 npm install
 ```
@@ -63,8 +63,9 @@ npm run dev
 ```
 
 ### 3. Configurare Frontend
-Intr-un terminal nou, in radacina proiectului:
+Intr-un terminal nou, navigheaza in folderul `frontend`:
 ```bash
+cd frontend
 npm install
 npm run dev
 ```
@@ -77,12 +78,13 @@ Proiectul include teste pentru ambele componente.
 
 **Backend:**
 ```bash
-cd server
+cd backend
 npm run test
 ```
 
 **Frontend:**
 ```bash
+cd frontend
 npm run test
 ```
 
@@ -96,7 +98,7 @@ Aplicatia este disponibila la `http://localhost:3001` (frontend servit din backe
 Postgres ruleaza pe `localhost:5435`.
 
 ## Variabile de mediu
-**Backend** (`server/.env`):
+**Backend** (`backend/.env`):
 - `DATABASE_URL` - URL conexiune Postgres (ex: `postgres://user:pass@host:5432/db`)
 - `PORT` - Port server (default: `3001`)
 - `CORS_ORIGIN` - Origini permise CORS (ex: `http://localhost:5173`)
@@ -104,7 +106,7 @@ Postgres ruleaza pe `localhost:5435`.
 - `DB_CONNECT_RETRIES` - Numar incercari conectare DB la pornire
 - `DB_CONNECT_DELAY_MS` - Pauza intre incercari (ms)
 
-**Frontend** (`.env`):
+**Frontend** (`frontend/.env`):
 - `VITE_API_URL` (gol pentru same-origin, sau `http://localhost:3001` in dev)
 
 ## Endpoints API
