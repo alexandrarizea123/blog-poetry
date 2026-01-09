@@ -48,7 +48,7 @@ app.get("/api/health", async (_req, res) => {
 
 // Static files
 if (SERVE_STATIC) {
-  const distPath = path.resolve(__dirname, "../dist");
+  const distPath = path.resolve(__dirname, "../frontend/dist");
 
   app.use(express.static(distPath));
   app.get("*", (req, res, next) => {

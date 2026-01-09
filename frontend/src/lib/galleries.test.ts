@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { isHiddenGalleryName, type Gallery } from './galleries';
+import { isHiddenGalleryName } from './galleries';
 
 describe('Galleries Logic', () => {
     describe('isHiddenGalleryName', () => {

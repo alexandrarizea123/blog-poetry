@@ -25,7 +25,7 @@ services:
       - "5435:5432"
     volumes:
       - blogpoetry_data:/var/lib/postgresql/data
-      - ./server/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U blogpoetry" ]
       interval: 5s

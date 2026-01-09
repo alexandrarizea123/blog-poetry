@@ -1,12 +1,14 @@
 FROM node:20-alpine AS frontend-build
 
-WORKDIR /app
-COPY package.json package-lock.json ./
+WORKDIR /app/frontend
+# Copy frontend package files
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
-COPY index.html vite.config.ts tsconfig.json tsconfig.app.json tsconfig.node.json ./
-COPY postcss.config.cjs tailwind.config.cjs ./
-COPY src ./src
+# Copy frontend source
+COPY frontend/index.html frontend/vite.config.ts frontend/tsconfig.json frontend/tsconfig.app.json frontend/tsconfig.node.json ./
+COPY frontend/postcss.config.cjs frontend/tailwind.config.cjs ./
+COPY frontend/src ./src
 
 ARG VITE_API_URL=
 ENV VITE_API_URL=${VITE_API_URL}
@@ -17,11 +19,12 @@ FROM node:20-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY server/package.json server/package-lock.json ./server/
-RUN cd server && npm ci --omit=dev
+# Backend setup
+COPY backend/package.json backend/package-lock.json ./backend/
+RUN cd backend && npm ci --omit=dev
 
-COPY server ./server
-COPY --from=frontend-build /app/dist ./dist
+COPY backend ./backend
+COPY --from=frontend-build /app/frontend/dist ./frontend/dist
 
 EXPOSE 3001
-CMD ["node", "server/index.js"]
+CMD ["node", "backend/index.js"]
