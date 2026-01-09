@@ -7,6 +7,16 @@ export type Gallery = {
   createdAt: string;
 };
 
+const HIDDEN_GALLERY_NAMES = new Set(["general"]);
+
+function normalizeGalleryName(name: string) {
+  return name.trim().toLowerCase();
+}
+
+export function isHiddenGalleryName(name: string) {
+  return HIDDEN_GALLERY_NAMES.has(normalizeGalleryName(name));
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }

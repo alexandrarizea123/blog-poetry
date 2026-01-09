@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import { fetchGalleries, type Gallery } from "../lib/galleries";
+import {
+  fetchGalleries,
+  isHiddenGalleryName,
+  type Gallery
+} from "../lib/galleries";
 import {
   buildExcerpt,
   buildMeta,
@@ -299,9 +303,23 @@ export function GaleriePoems() {
     }
   }
 
-  const galleryNameById = useMemo(() => {
-    return new Map(galleries.map((gallery) => [gallery.id, gallery.name]));
+  const hiddenGalleryIds = useMemo(() => {
+    return new Set(
+      galleries
+        .filter((gallery) => isHiddenGalleryName(gallery.name))
+        .map((gallery) => gallery.id)
+    );
   }, [galleries]);
+
+  const visibleGalleries = useMemo(() => {
+    return galleries.filter((gallery) => !isHiddenGalleryName(gallery.name));
+  }, [galleries]);
+
+  const galleryNameById = useMemo(() => {
+    return new Map(
+      visibleGalleries.map((gallery) => [gallery.id, gallery.name])
+    );
+  }, [visibleGalleries]);
 
   const isInvalidGallery = selectedFilter === "invalid";
   const galleryExists =
@@ -314,13 +332,18 @@ export function GaleriePoems() {
       return storedPoems;
     }
     if (selectedFilter === "none") {
-      return storedPoems.filter((poem) => !poem.galleryId);
+      return storedPoems.filter(
+        (poem) => !poem.galleryId || hiddenGalleryIds.has(poem.galleryId)
+      );
     }
     if (typeof selectedFilter === "number") {
+      if (hiddenGalleryIds.has(selectedFilter)) {
+        return [];
+      }
       return storedPoems.filter((poem) => poem.galleryId === selectedFilter);
     }
     return [];
-  }, [selectedFilter, storedPoems]);
+  }, [hiddenGalleryIds, selectedFilter, storedPoems]);
 
   const displayPoems: DisplayPoem[] = filteredStoredPoems.map((poem) => ({
     key: `user-${poem.id}`,

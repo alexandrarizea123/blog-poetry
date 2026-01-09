@@ -1,9 +1,14 @@
 import type { FormEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { DropdownSelect } from "../components/DropdownSelect";
-import { createGallery, fetchGalleries, type Gallery } from "../lib/galleries";
+import {
+  createGallery,
+  fetchGalleries,
+  isHiddenGalleryName,
+  type Gallery
+} from "../lib/galleries";
 import { createPoem } from "../lib/poems";
 
 export function ScriePoezie() {
@@ -17,9 +22,13 @@ export function ScriePoezie() {
   const [newGalleryName, setNewGalleryName] = useState("");
   const { user } = useAuth();
 
+  const visibleGalleries = useMemo(() => {
+    return galleries.filter((gallery) => !isHiddenGalleryName(gallery.name));
+  }, [galleries]);
+
   const galleryOptions = [
     { value: "", label: "Toate poeziile" },
-    ...galleries.map((gallery) => ({
+    ...visibleGalleries.map((gallery) => ({
       value: String(gallery.id),
       label: gallery.name
     }))
@@ -68,9 +77,13 @@ export function ScriePoezie() {
       setGalleryError("Scrie un nume pentru galerie.");
       return;
     }
+    if (isHiddenGalleryName(normalizedName)) {
+      setGalleryError("Numele galeriei este rezervat.");
+      return;
+    }
 
     if (
-      galleries.some(
+      visibleGalleries.some(
         (gallery) =>
           gallery.name.toLowerCase() === normalizedName.toLowerCase()
       )

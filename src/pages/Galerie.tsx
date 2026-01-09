@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import {
   deleteGallery,
   fetchGalleries,
+  isHiddenGalleryName,
   updateGallery,
   type Gallery
 } from "../lib/galleries";
@@ -81,9 +82,23 @@ export function Galerie() {
     return counts;
   }, [storedPoems]);
 
+  const hiddenGalleryIds = useMemo(() => {
+    return new Set(
+      galleries
+        .filter((gallery) => isHiddenGalleryName(gallery.name))
+        .map((gallery) => gallery.id)
+    );
+  }, [galleries]);
+
+  const visibleGalleries = useMemo(() => {
+    return galleries.filter((gallery) => !isHiddenGalleryName(gallery.name));
+  }, [galleries]);
+
   const unassignedCount = useMemo(() => {
-    return storedPoems.filter((poem) => !poem.galleryId).length;
-  }, [storedPoems]);
+    return storedPoems.filter(
+      (poem) => !poem.galleryId || hiddenGalleryIds.has(poem.galleryId)
+    ).length;
+  }, [storedPoems, hiddenGalleryIds]);
 
   const canManageGalleries = user?.role === "poet";
 
@@ -108,6 +123,10 @@ export function Galerie() {
     const normalizedName = editGalleryName.trim();
     if (!normalizedName) {
       setEditGalleryError("Completeaza numele galeriei.");
+      return;
+    }
+    if (isHiddenGalleryName(normalizedName)) {
+      setEditGalleryError("Numele galeriei este rezervat.");
       return;
     }
 
@@ -188,7 +207,7 @@ export function Galerie() {
               Galerii
             </h2>
             <p className="text-xs uppercase tracking-[0.3em] text-black/60">
-              {galleries.length} galerii
+              {visibleGalleries.length} galerii
             </p>
           </div>
 
@@ -201,7 +220,7 @@ export function Galerie() {
           {isLoading ? (
             <p className="mt-4 text-sm text-black/70">Se incarca galeriile...</p>
           ) : null}
-          {!isLoading && galleries.length === 0 ? (
+          {!isLoading && visibleGalleries.length === 0 ? (
             <p className="mt-4 text-sm text-black/70">
               Nu exista galerii salvate.
             </p>
@@ -236,7 +255,7 @@ export function Galerie() {
               </Link>
             ) : null}
 
-            {galleries.map((gallery) => (
+            {visibleGalleries.map((gallery) => (
               <div
                 key={gallery.id}
                 className="rounded-2xl border border-black/20 bg-white p-5 text-left shadow-[0_14px_35px_-28px_rgba(0,0,0,0.45)]"
