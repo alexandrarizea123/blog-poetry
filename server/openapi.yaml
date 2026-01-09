@@ -1,0 +1,167 @@
+openapi: 3.0.0
+info:
+  title: Blog Poetry API
+  version: 1.0.0
+  description: API for managing Poems, Galleries, and User interactions.
+servers:
+  - url: http://localhost:3001
+    description: Local server
+paths:
+  /api/health:
+    get:
+      summary: Check API health
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+
+  /api/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                role:
+                  type: string
+                  enum: [poet, cititor]
+      responses:
+        '201':
+          description: User created
+        '400':
+          description: Invalid input
+        '409':
+          description: Email already exists
+
+  /api/login:
+    post:
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                role:
+                  type: string
+                  enum: [poet, cititor]
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Invalid credentials
+
+  /api/galleries:
+    get:
+      summary: Get all galleries
+      parameters:
+        - in: query
+          name: authorId
+          schema:
+            type: integer
+          description: Filter by author ID
+      responses:
+        '200':
+          description: List of galleries
+    post:
+      summary: Create a gallery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                authorId:
+                  type: integer
+      responses:
+        '201':
+          description: Gallery created
+        '409':
+          description: Gallery exists
+
+  /api/poems:
+    get:
+      summary: Get all poems
+      responses:
+        '200':
+          description: List of poems
+    post:
+      summary: Create a poem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                authorId:
+                  type: integer
+                galleryId:
+                  type: integer
+                  nullable: true
+      responses:
+        '201':
+          description: Poem created
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+    Gallery:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        authorId:
+          type: integer
+    Poem:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        authorId:
+          type: integer
+        galleryId:
+          type: integer
